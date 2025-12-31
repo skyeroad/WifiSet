@@ -131,12 +131,30 @@ void WiFiSetBLEService::startAdvertising() {
         return;
     }
 
+    // Stop any existing advertising first
+    BLEDevice::getAdvertising()->stop();
+    delay(100);
+
     BLEAdvertising* pAdvertising = BLEDevice::getAdvertising();
-    pAdvertising->addServiceUUID(WIFISET_SERVICE_UUID);
-    pAdvertising->setScanResponse(true);
-    pAdvertising->setMinPreferred(0x06);  // Help with iPhone connections
-    pAdvertising->setMinPreferred(0x12);
+
+    // Reset advertising data to avoid duplicates
+    BLEAdvertisementData advData;
+    advData.setFlags(ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT);
+    advData.setCompleteServices(BLEUUID(WIFISET_SERVICE_UUID));
+    advData.setName(deviceName.c_str());
+    pAdvertising->setAdvertisementData(advData);
+
+    // Set scan response data with device name
+    BLEAdvertisementData scanRespData;
+    scanRespData.setName(deviceName.c_str());
+    pAdvertising->setScanResponseData(scanRespData);
+
+    // Configure advertising parameters for better WiFi coexistence
+    pAdvertising->setMinPreferred(0x12);  // 0x12 * 1.25ms = 22.5ms min interval
+    pAdvertising->setMaxPreferred(0x24);  // 0x24 * 1.25ms = 45ms max interval
+
     BLEDevice::startAdvertising();
+    Serial.println("[BLE] Advertising started");
 }
 
 void WiFiSetBLEService::stopAdvertising() {

@@ -98,10 +98,16 @@ public:
      * Mark that credentials have been configured
      * Called after credentials are saved to NVS
      */
-    void setCredentialsConfigured(bool configured);
+    void setCredentialsConfigured(bool configured, const String& ssid = "");
+
+    /**
+     * Get the configured SSID (even if not currently connected)
+     */
+    String getConfiguredSSID() const { return configuredSSID; }
 
 private:
     String lastError;
+    String configuredSSID;
     ConnectionState connectionState;
     bool credentialsConfigured;
 

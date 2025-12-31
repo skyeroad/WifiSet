@@ -152,8 +152,11 @@ void WiFiManager::updateConnectionState() {
     }
 }
 
-void WiFiManager::setCredentialsConfigured(bool configured) {
+void WiFiManager::setCredentialsConfigured(bool configured, const String& ssid) {
     credentialsConfigured = configured;
+    if (!ssid.isEmpty()) {
+        configuredSSID = ssid;
+    }
     updateConnectionState();
 }
 
@@ -177,10 +180,12 @@ IPAddress WiFiManager::getIPAddress() {
 }
 
 String WiFiManager::getSSID() {
-    if (WiFi.getMode() == WIFI_STA) {
+    // If connected, return the actual connected SSID
+    if (isConnected()) {
         return WiFi.SSID();
     }
-    return "";
+    // Otherwise return the configured SSID (from NVS)
+    return configuredSSID;
 }
 
 } // namespace WiFiSet

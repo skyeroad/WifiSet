@@ -27,8 +27,8 @@ void WiFiSetESP32::begin() {
     StoredCredentials credentials = nvsManager.loadCredentials();
 
     if (credentials.isValid) {
-        // Mark that we have credentials configured
-        wifiManager.setCredentialsConfigured(true);
+        // Mark that we have credentials configured (with SSID for status display)
+        wifiManager.setCredentialsConfigured(true, credentials.ssid);
 
         // Attempt to connect with saved credentials
         WiFiConnectResult result = wifiManager.connect(credentials.ssid, credentials.password);
@@ -43,14 +43,15 @@ void WiFiSetESP32::begin() {
             if (wifiConnectionFailedCallback) {
                 wifiConnectionFailedCallback();
             }
-            // Start BLE advertising since WiFi failed
-            bleService.startAdvertising();
         }
     } else {
-        // No saved credentials, start BLE advertising
         lastConnectionState = ConnectionState::NOT_CONFIGURED;
-        bleService.startAdvertising();
     }
+
+    // Always start BLE advertising to allow WiFi configuration/reconfiguration
+    // Start after WiFi to ensure proper radio coexistence
+    delay(500);
+    bleService.startAdvertising();
 }
 
 void WiFiSetESP32::loop() {
@@ -189,8 +190,8 @@ void WiFiSetESP32::handleWiFiConnection(const String& ssid, const String& passwo
         return;
     }
 
-    // Mark that credentials are now configured
-    wifiManager.setCredentialsConfigured(true);
+    // Mark that credentials are now configured (with SSID for status display)
+    wifiManager.setCredentialsConfigured(true, ssid);
 
     // Attempt to connect
     lastConnectionState = ConnectionState::CONNECTING;
