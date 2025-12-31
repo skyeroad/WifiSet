@@ -5,7 +5,9 @@
       "Bash(find:*)",
       "Bash(xcodebuild:*)",
       "Bash(pio run:*)",
-      "Bash(pio device monitor:*)"
+      "Bash(pio device monitor:*)",
+      "Skill(uclaude)",
+      "Skill(udocs)"
     ]
   }
 }

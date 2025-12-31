@@ -227,8 +227,8 @@ For complete protocol specification, see [PROTOCOL.md](PROTOCOL.md)
 - ESP32 BLE Arduino library (2.0.0+)
 
 ### iOS
-- iOS 16.0 or later
-- Xcode 14.0 or later
+- iOS 17.0 or later (uses `.navigationDestination(item:)` API)
+- Xcode 15.0 or later
 - Physical iOS device (BLE not available in simulator)
 - Swift 5.9+
 

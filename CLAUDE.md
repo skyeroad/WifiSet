@@ -118,6 +118,91 @@ WiFiSetSDK (Swift Package)
 
 ## Common Issues & Solutions
 
+### BLE Callback Pattern (CRITICAL)
+
+**Symptom**: Serial output corruption, crashes, or ESP32 reboots when BLE client connects or credentials received.
+
+**Root cause**: Heavy work (WiFi scan, NVS write, BLE notifications, user callbacks) done inside BLE callback context. The BLE task has limited stack and runs at high priority.
+
+**Solution**: Use flag-based deferred execution. BLE callbacks only set flags, heavy work happens in `loop()`:
+```cpp
+// In header:
+volatile bool pendingClientConnect;
+volatile bool pendingCredentials;
+String pendingSSID;
+String pendingPassword;
+
+// In BLE callback:
+void WiFiSetESP32::onClientConnected() {
+    pendingClientConnect = true;  // Just set flag
+}
+
+void WiFiSetESP32::onCredentialsReceived(const String& ssid, const String& password) {
+    pendingSSID = ssid;
+    pendingPassword = password;
+    pendingCredentials = true;  // Just set flag
+}
+
+// In loop():
+void WiFiSetESP32::loop() {
+    if (pendingClientConnect) {
+        pendingClientConnect = false;
+        // Now safe to do heavy work: user callbacks, WiFi scan, BLE sends
+        if (bleClientConnectedCallback) bleClientConnectedCallback();
+        performWiFiScanAndSend();
+    }
+    if (pendingCredentials) {
+        pendingCredentials = false;
+        handleWiFiConnection(pendingSSID, pendingPassword);
+    }
+}
+```
+
+### ESP32-S3 USB CDC Serial Issues
+
+**Symptom**: `Serial.flush()` doesn't prevent output truncation, or makes it worse.
+
+**Root cause**: ESP32-S3 USB CDC implementation handles `Serial.flush()` differently than traditional UART.
+
+**Solution**: Don't rely on `Serial.flush()` for timing. Use delays and reduce output volume during BLE operations. The deferred callback pattern (above) is the real fix.
+
+### WiFi Connection State Tracking
+
+**Symptom**: State shows `NOT_CONFIGURED` even after credentials saved, because `WiFi.SSID()` returns empty after `WiFi.disconnect()`.
+
+**Solution**: WiFiManager now has `credentialsConfigured` flag, set when credentials are saved:
+```cpp
+wifiManager.setCredentialsConfigured(true);  // After NVS save
+```
+
+This flag persists in memory and properly returns `CONFIGURED_NOT_CONNECTED` state.
+
+### Example Code Ordering
+
+**Important**: In `main.cpp`, call `getSavedCredentials()` AFTER `wifiSet.begin()`:
+```cpp
+// WRONG - NVS not initialized yet:
+WiFiSet::WiFiSetCredentials savedCreds = wifiSet.getSavedCredentials();
+wifiSet.begin();
+
+// CORRECT - NVS initialized in begin():
+wifiSet.begin();
+WiFiSet::WiFiSetCredentials savedCreds = wifiSet.getSavedCredentials();
+```
+
+### iOS Protocol Decoder Empty Data
+
+**Symptom**: "Invalid message format: Header too short" error when iOS connects.
+
+**Root cause**: iOS immediately reads status characteristic, but ESP32 hasn't set a value yet.
+
+**Solution**: Skip decoding if data is too short:
+```swift
+guard let data = characteristic.value, data.count >= MessageHeader.size else {
+    return  // Skip empty or too-short data
+}
+```
+
 ### ESP32 BLE Advertising Not Visible
 
 **Symptom**: iOS app cannot find ESP32 device.
@@ -170,6 +255,31 @@ if (bleService.isClientConnected()) {
     bleService.sendWiFiNetworkList(networks);
 }
 ```
+
+### BLE Notification Sending Rate
+
+**Symptom**: ESP32 crashes when sending multiple BLE notifications rapidly (e.g., WiFi network list).
+
+**Root cause**: BLE stack has limited queue for outgoing notifications. Rapid sends overflow the queue.
+
+**Solution**: Add delays and yield() between notifications:
+```cpp
+void WiFiSetBLEService::sendWiFiNetworkList(const std::vector<WiFiNetworkInfo>& networks) {
+    sendNotification(pWiFiListCharacteristic, startMsg);
+    delay(100);  // 100ms between notifications
+    yield();     // Let BLE stack process
+
+    for (const auto& network : networks) {
+        sendNotification(pWiFiListCharacteristic, entryMsg);
+        delay(100);
+        yield();
+    }
+}
+```
+
+### WiFi Connection Timeout
+
+Default timeout changed from 30 seconds to 10 seconds (`WiFiManager.h`). Faster failure feedback for wrong password or out-of-range networks.
 
 ## Testing Workflow
 
@@ -284,3 +394,29 @@ See `PROTOCOL.md` for complete specification with hex examples.
 **PlatformIO config**: `ESP32/example/platformio.ini` (hardware-specific settings)
 
 **Swift Package manifest**: `iOS/WiFiSet/WiFiSetSDK/Package.swift`
+
+## Current Status / Known Issues
+
+### WiFi Connection Debugging (In Progress)
+
+WiFi connection from iOS app to ESP32 is currently failing even with correct credentials. Debug logging has been added to `WiFiManager::connect()` to diagnose the issue. Serial output will show:
+- SSID and password length being used
+- WiFi status codes during connection attempt (0=IDLE, 1=NO_SSID, 4=CONNECT_FAILED, 6=DISCONNECTED)
+- Timeout or failure reason
+
+Check serial monitor output to see what status code is being returned.
+
+### Items Working
+
+- ✅ BLE advertising and iOS discovery
+- ✅ BLE connection stability (using deferred callback pattern)
+- ✅ WiFi network scanning and list transmission to iOS
+- ✅ Credential transmission from iOS to ESP32
+- ✅ NVS credential storage (persists across reboots)
+- ✅ Serial output no longer corrupted
+- ✅ iOS protocol decoder handles empty data gracefully
+
+### Items To Test/Fix
+
+- ⏳ WiFi connection with received credentials (debug logging added)
+- ⏳ Full end-to-end flow: scan → select network → enter password → ESP32 connects

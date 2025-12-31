@@ -366,14 +366,21 @@ WiFiSetESP32 uses a custom binary protocol over BLE for efficient communication.
 - Verify credentials are correct (case-sensitive!)
 - Check WiFi network is in range
 - Verify router is working
-- Check Serial output for error messages
+- Check Serial output for error messages (WiFi status codes: 0=IDLE, 1=NO_SSID, 4=CONNECT_FAILED, 6=DISCONNECTED)
 - Try clearing credentials: `wifiSet.clearCredentials()`
+- Default connection timeout is 10 seconds
 
 ### Credentials Not Persisting
 
 - Verify NVS partition exists in partition table
 - Check available NVS space
 - Try erasing flash and reflashing
+
+### Serial Output Corruption During BLE Connection
+
+If serial output appears truncated or corrupted when an iOS client connects, this is typically caused by doing heavy work (WiFi scan, callbacks) inside BLE callback context.
+
+The library uses a deferred callback pattern - BLE callbacks just set flags, and heavy work is done in `loop()`. Ensure `wifiSet.loop()` is called regularly in your main loop.
 
 ### High Memory Usage
 

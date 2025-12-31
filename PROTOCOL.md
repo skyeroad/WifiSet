@@ -291,7 +291,7 @@ If messages exceed MTU:
 - If invalid message received, send Error (0xFF) with appropriate error code
 - If WiFi scan fails, send Error (0xFF) with code 0x02
 - If credential storage fails, send Credential Write ACK with error status
-- WiFi connection timeout: 30 seconds, then send Status Response with Connection Failed
+- WiFi connection timeout: 10 seconds, then send Status Response with Connection Failed
 
 ## Security Considerations
 
