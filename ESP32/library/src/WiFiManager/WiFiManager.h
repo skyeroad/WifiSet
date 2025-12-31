@@ -44,10 +44,10 @@ public:
      * Connect to WiFi network
      * @param ssid Network name
      * @param password Network password (empty for open networks)
-     * @param timeoutMs Connection timeout in milliseconds (default 30000)
+     * @param timeoutMs Connection timeout in milliseconds (default 10000)
      * @return Connection result
      */
-    WiFiConnectResult connect(const String& ssid, const String& password, unsigned long timeoutMs = 30000);
+    WiFiConnectResult connect(const String& ssid, const String& password, unsigned long timeoutMs = 10000);
 
     /**
      * Disconnect from WiFi
@@ -94,9 +94,16 @@ public:
      */
     static SecurityType convertEncryptionType(wifi_auth_mode_t authMode);
 
+    /**
+     * Mark that credentials have been configured
+     * Called after credentials are saved to NVS
+     */
+    void setCredentialsConfigured(bool configured);
+
 private:
     String lastError;
     ConnectionState connectionState;
+    bool credentialsConfigured;
 
     /**
      * Set error message

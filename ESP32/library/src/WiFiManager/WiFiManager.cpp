@@ -2,7 +2,7 @@
 
 namespace WiFiSet {
 
-WiFiManager::WiFiManager() : lastError(""), connectionState(ConnectionState::NOT_CONFIGURED) {}
+WiFiManager::WiFiManager() : lastError(""), connectionState(ConnectionState::NOT_CONFIGURED), credentialsConfigured(false) {}
 
 void WiFiManager::setError(const String& error) {
     lastError = error;
@@ -72,8 +72,12 @@ WiFiConnectResult WiFiManager::connect(const String& ssid, const String& passwor
         return WiFiConnectResult::FAILED_UNKNOWN;
     }
 
+    Serial.printf("[WiFi] Connecting to: '%s'\n", ssid.c_str());
+    Serial.printf("[WiFi] Password length: %d\n", password.length());
+
     // Disconnect if already connected
     if (WiFi.status() == WL_CONNECTED) {
+        Serial.println("[WiFi] Disconnecting from current network...");
         WiFi.disconnect();
         delay(100);
     }
@@ -82,12 +86,14 @@ WiFiConnectResult WiFiManager::connect(const String& ssid, const String& passwor
     connectionState = ConnectionState::CONNECTING;
 
     // Start connection
+    Serial.println("[WiFi] Calling WiFi.begin()...");
     WiFi.begin(ssid.c_str(), password.c_str());
 
     // Wait for connection with timeout
     unsigned long startTime = millis();
     while (WiFi.status() != WL_CONNECTED) {
         if (millis() - startTime > timeoutMs) {
+            Serial.printf("[WiFi] Timeout after %lu ms\n", timeoutMs);
             setError("Connection timeout");
             connectionState = ConnectionState::CONNECTION_FAILED;
             WiFi.disconnect();
@@ -97,21 +103,31 @@ WiFiConnectResult WiFiManager::connect(const String& ssid, const String& passwor
         // Check for specific failure reasons
         wl_status_t status = WiFi.status();
         if (status == WL_CONNECT_FAILED) {
+            Serial.println("[WiFi] WL_CONNECT_FAILED - wrong password?");
             setError("Connection failed - wrong password or network issue");
             connectionState = ConnectionState::CONNECTION_FAILED;
             WiFi.disconnect();
             return WiFiConnectResult::FAILED_WRONG_PASSWORD;
         } else if (status == WL_NO_SSID_AVAIL) {
+            Serial.println("[WiFi] WL_NO_SSID_AVAIL - network not found");
             setError("Network not found");
             connectionState = ConnectionState::CONNECTION_FAILED;
             WiFi.disconnect();
             return WiFiConnectResult::FAILED_NOT_FOUND;
         }
 
+        // Print status every second
+        static unsigned long lastPrint = 0;
+        if (millis() - lastPrint > 1000) {
+            Serial.printf("[WiFi] Status: %d, waiting...\n", status);
+            lastPrint = millis();
+        }
+
         delay(100);
     }
 
     // Connection successful
+    Serial.printf("[WiFi] Connected! IP: %s\n", WiFi.localIP().toString().c_str());
     connectionState = ConnectionState::CONNECTED;
     return WiFiConnectResult::SUCCESS;
 }
@@ -128,12 +144,17 @@ bool WiFiManager::isConnected() {
 void WiFiManager::updateConnectionState() {
     if (WiFi.status() == WL_CONNECTED) {
         connectionState = ConnectionState::CONNECTED;
-    } else if (WiFi.getMode() == WIFI_STA && WiFi.SSID().length() > 0) {
-        // WiFi is configured but not connected
+    } else if (credentialsConfigured) {
+        // Credentials are saved in NVS but not currently connected
         connectionState = ConnectionState::CONFIGURED_NOT_CONNECTED;
     } else {
         connectionState = ConnectionState::NOT_CONFIGURED;
     }
+}
+
+void WiFiManager::setCredentialsConfigured(bool configured) {
+    credentialsConfigured = configured;
+    updateConnectionState();
 }
 
 ConnectionState WiFiManager::getConnectionState() {

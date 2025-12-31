@@ -117,22 +117,20 @@ void setup() {
         Serial.println("      BLE advertising will resume automatically\n");
     });
 
-    // Check for saved credentials before initializing
-    Serial.println("[INIT] Checking for saved credentials...");
+    // Initialize WiFiSet first (this initializes NVS)
+    Serial.println("[INIT] Starting WiFiSet library...");
+    wifiSet.begin();
+    Serial.println("[INIT] WiFiSet library started!\n");
+
+    // Check for saved credentials AFTER initialization
+    Serial.println("[INIT] Checking saved credentials...");
     WiFiSet::WiFiSetCredentials savedCreds = wifiSet.getSavedCredentials();
     if (savedCreds.isValid) {
         Serial.println("[INIT] Found saved credentials:");
         Serial.printf("       SSID: %s\n", savedCreds.ssid.c_str());
-        Serial.println("       Auto-connect will be attempted\n");
     } else {
-        Serial.println("[INIT] No saved credentials found");
-        Serial.println("       BLE advertising will start for initial setup\n");
+        Serial.println("[INIT] No saved credentials - BLE advertising active\n");
     }
-
-    // Initialize WiFiSet
-    Serial.println("[INIT] Starting WiFiSet library...");
-    wifiSet.begin();
-    Serial.println("[INIT] WiFiSet library started!\n");
 
     if (wifiSet.isBLERunning()) {
         printSeparator();

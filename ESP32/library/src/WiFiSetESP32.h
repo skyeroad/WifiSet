@@ -216,6 +216,9 @@ private:
     // Deferred action flags (work done in loop, not callbacks)
     volatile bool pendingClientConnect;
     volatile bool pendingClientDisconnect;
+    volatile bool pendingCredentials;
+    String pendingSSID;
+    String pendingPassword;
 
     // User callbacks
     std::function<void(const String&, const String&)> credentialsReceivedCallback;

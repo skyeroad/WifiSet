@@ -7,7 +7,8 @@ WiFiSetESP32::WiFiSetESP32(const char* deviceName)
       lastConnectionState(ConnectionState::NOT_CONFIGURED),
       lastStatusUpdate(0),
       pendingClientConnect(false),
-      pendingClientDisconnect(false) {}
+      pendingClientDisconnect(false),
+      pendingCredentials(false) {}
 
 WiFiSetESP32::~WiFiSetESP32() {}
 
@@ -26,6 +27,9 @@ void WiFiSetESP32::begin() {
     StoredCredentials credentials = nvsManager.loadCredentials();
 
     if (credentials.isValid) {
+        // Mark that we have credentials configured
+        wifiManager.setCredentialsConfigured(true);
+
         // Attempt to connect with saved credentials
         WiFiConnectResult result = wifiManager.connect(credentials.ssid, credentials.password);
 
@@ -35,7 +39,7 @@ void WiFiSetESP32::begin() {
                 wifiConnectedCallback(wifiManager.getIPAddress());
             }
         } else {
-            lastConnectionState = ConnectionState::CONNECTION_FAILED;
+            lastConnectionState = ConnectionState::CONFIGURED_NOT_CONNECTED;
             if (wifiConnectionFailedCallback) {
                 wifiConnectionFailedCallback();
             }
@@ -70,6 +74,26 @@ void WiFiSetESP32::loop() {
         // Send current status
         delay(100);
         sendCurrentStatus();
+    }
+
+    // Handle deferred credentials (do heavy work outside callback)
+    if (pendingCredentials) {
+        pendingCredentials = false;
+
+        // Copy credentials locally (they may be overwritten)
+        String ssid = pendingSSID;
+        String password = pendingPassword;
+
+        // Notify user callback
+        if (credentialsReceivedCallback) {
+            credentialsReceivedCallback(ssid, password);
+        }
+
+        // Small delay
+        delay(100);
+
+        // Handle WiFi connection
+        handleWiFiConnection(ssid, password);
     }
 
     // Handle deferred BLE client disconnect
@@ -165,6 +189,9 @@ void WiFiSetESP32::handleWiFiConnection(const String& ssid, const String& passwo
         return;
     }
 
+    // Mark that credentials are now configured
+    wifiManager.setCredentialsConfigured(true);
+
     // Attempt to connect
     lastConnectionState = ConnectionState::CONNECTING;
     sendCurrentStatus();
@@ -179,7 +206,8 @@ void WiFiSetESP32::handleWiFiConnection(const String& ssid, const String& passwo
             wifiConnectedCallback(wifiManager.getIPAddress());
         }
     } else {
-        lastConnectionState = ConnectionState::CONNECTION_FAILED;
+        // Credentials are saved but connection failed
+        lastConnectionState = ConnectionState::CONFIGURED_NOT_CONNECTED;
         sendCurrentStatus();
 
         if (wifiConnectionFailedCallback) {
@@ -197,13 +225,10 @@ void WiFiSetESP32::handleWiFiConnection(const String& ssid, const String& passwo
 //
 
 void WiFiSetESP32::onCredentialsReceived(const String& ssid, const String& password) {
-    // Notify user callback
-    if (credentialsReceivedCallback) {
-        credentialsReceivedCallback(ssid, password);
-    }
-
-    // Handle WiFi connection
-    handleWiFiConnection(ssid, password);
+    // Just set flag and store credentials - heavy work done in loop()
+    pendingSSID = ssid;
+    pendingPassword = password;
+    pendingCredentials = true;
 }
 
 void WiFiSetESP32::onClientConnected() {
@@ -265,7 +290,11 @@ WiFiSetCredentials WiFiSetESP32::getSavedCredentials() {
 }
 
 bool WiFiSetESP32::clearCredentials() {
-    return nvsManager.clearCredentials();
+    bool result = nvsManager.clearCredentials();
+    if (result) {
+        wifiManager.setCredentialsConfigured(false);
+    }
+    return result;
 }
 
 //
