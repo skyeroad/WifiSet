@@ -1,0 +1,155 @@
+# WiFiSet Monorepo .gitignore
+
+# ====================
+# macOS
+# ====================
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ====================
+# IDEs
+# ====================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.cproject
+.settings/
+*.code-workspace
+
+# ====================
+# iOS / Xcode
+# ====================
+# Xcode user data
+xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+*.app
+
+# Swift Package Manager
+.swiftpm/
+Package.resolved
+iOS/**/.build/
+
+# Build products
+iOS/**/Build/
+iOS/**/build/
+
+# CocoaPods
+Pods/
+Podfile.lock
+
+# Carthage
+Carthage/Build/
+Carthage/Checkouts/
+
+# Accio
+Dependencies/
+.accio/
+
+# fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# Code Injection
+iOSInjectionProject/
+
+# Temporary files
+*.moved-aside
+*~.nib
+
+# Playgrounds
+timeline.xctimeline
+playground.xcworkspace
+
+# ====================
+# ESP32 / PlatformIO
+# ====================
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+.clang_complete
+.gcc-flags.json
+.ccls
+compile_commands.json
+
+# Build artifacts
+*.bin
+*.elf
+*.map
+*.hex
+*.o
+*.a
+*.so
+*.dylib
+firmware.bin
+
+# PlatformIO settings
+platformio.ini.bak
+.pio.nosync
+
+# Test results
+ESP32/**/.pio/build/test/
+test/output/
+
+# Python (for PlatformIO scripts)
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.Python
+venv/
+ENV/
+
+# ====================
+# Credentials & Secrets
+# ====================
+# Never commit credentials
+**/credentials.h
+**/secrets.h
+**/config_local.h
+*.env
+.env.local
+
+# ====================
+# Logs & Temporary Files
+# ====================
+*.log
+*.tmp
+*.temp
+*.bak
+*.backup
+logs/
+
+# ====================
+# Documentation Builds
+# ====================
+docs/_build/
+site/
+
+# ====================
+# Package Managers
+# ====================
+node_modules/
+.npm/
+
+# ====================
+# Claude Code (optional)
+# ====================
+# Uncomment if you don't want to track Claude plans
+# .claude/

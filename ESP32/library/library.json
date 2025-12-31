@@ -1,0 +1,41 @@
+{
+  "name": "WiFiSetESP32",
+  "version": "1.0.0",
+  "description": "BLE-based WiFi configuration library for ESP32 with persistent credential storage",
+  "keywords": [
+    "wifi",
+    "ble",
+    "bluetooth",
+    "esp32",
+    "configuration",
+    "provisioning",
+    "nvs",
+    "credentials"
+  ],
+  "authors": [
+    {
+      "name": "Matt Long",
+      "email": "matt@skyeroad.com",
+      "maintainer": true
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/WiFiSet.git"
+  },
+  "homepage": "https://github.com/yourusername/WiFiSet",
+  "license": "MIT",
+  "frameworks": "arduino",
+  "platforms": ["espressif32"],
+  "dependencies": {
+    "ESP32 BLE Arduino": "^2.0.0"
+  },
+  "export": {
+    "include": [
+      "src/*",
+      "examples/*",
+      "README.md",
+      "library.json"
+    ]
+  }
+}

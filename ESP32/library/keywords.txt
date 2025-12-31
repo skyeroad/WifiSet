@@ -1,0 +1,46 @@
+###########################################
+# WiFiSetESP32 Library Keywords
+###########################################
+
+###########################################
+# Datatypes (KEYWORD1)
+###########################################
+
+WiFiSetESP32	KEYWORD1
+WiFiSetConnectionStatus	KEYWORD1
+WiFiSetCredentials	KEYWORD1
+
+###########################################
+# Methods and Functions (KEYWORD2)
+###########################################
+
+begin	KEYWORD2
+loop	KEYWORD2
+onCredentialsReceived	KEYWORD2
+onConnectionStatusChanged	KEYWORD2
+onWiFiConnected	KEYWORD2
+onWiFiConnectionFailed	KEYWORD2
+onBLEClientConnected	KEYWORD2
+onBLEClientDisconnected	KEYWORD2
+getSavedCredentials	KEYWORD2
+clearCredentials	KEYWORD2
+connectWiFi	KEYWORD2
+disconnectWiFi	KEYWORD2
+getConnectionStatus	KEYWORD2
+isConnected	KEYWORD2
+getIPAddress	KEYWORD2
+getRSSI	KEYWORD2
+getSSID	KEYWORD2
+startBLE	KEYWORD2
+stopBLE	KEYWORD2
+isBLERunning	KEYWORD2
+
+###########################################
+# Constants (LITERAL1)
+###########################################
+
+NOT_CONFIGURED	LITERAL1
+CONFIGURED_NOT_CONNECTED	LITERAL1
+CONNECTING	LITERAL1
+CONNECTED	LITERAL1
+CONNECTION_FAILED	LITERAL1
