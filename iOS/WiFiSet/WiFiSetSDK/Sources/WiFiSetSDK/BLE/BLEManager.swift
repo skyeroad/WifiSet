@@ -10,6 +10,7 @@ public class BLEManager: NSObject, ObservableObject {
     @Published public private(set) var isScanning = false
     @Published public private(set) var connectedDevice: BLEPeripheral?
     @Published public private(set) var bluetoothState: CBManagerState = .unknown
+    @Published public private(set) var deviceStatus: DeviceStatus?
 
     // MARK: - Callbacks
 
@@ -84,6 +85,7 @@ public class BLEManager: NSObject, ObservableObject {
 
         centralManager.cancelPeripheralConnection(peripheral)
         connectedDevice = nil
+        deviceStatus = nil
         wifiListCharacteristic = nil
         credentialCharacteristic = nil
         statusCharacteristic = nil
@@ -301,6 +303,9 @@ extension BLEManager: CBPeripheralDelegate {
             }
 
         case .statusResponse(let status):
+            DispatchQueue.main.async {
+                self.deviceStatus = status
+            }
             onStatusReceived?(status)
 
         case .error(let code, let errorMessage):

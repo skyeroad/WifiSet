@@ -8,7 +8,8 @@
 #include <WiFiSetESP32.h>
 
 // Create WiFiSetESP32 instance
-WiFiSetESP32 wifiSet("ESP32-WiFiSet-Test");
+const char* DEVICE_NAME = "ESP32-WiFiSet-Test";
+WiFiSetESP32 wifiSet(DEVICE_NAME);
 
 void printSeparator() {
     Serial.println("========================================");
@@ -136,12 +137,12 @@ void setup() {
         printSeparator();
         Serial.println("BLE Advertising Active");
         printSeparator();
-        Serial.println("Device Name: ESP32-WiFiSet-Test");
+        Serial.printf("Device Name: %s\n", DEVICE_NAME);
         Serial.println();
         Serial.println("To configure WiFi:");
         Serial.println("1. Open WiFiSet app on iPhone");
         Serial.println("2. Scan for devices");
-        Serial.println("3. Select 'ESP32-WiFiSet-Test'");
+        Serial.printf("3. Select '%s'\n", DEVICE_NAME);
         Serial.println("4. Choose WiFi network");
         Serial.println("5. Enter password");
         printSeparator();

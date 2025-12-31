@@ -106,6 +106,22 @@ public struct WiFiNetworkListView: View {
 
     private var networkListView: some View {
         List {
+            // Show current WiFi status if ESP32 has credentials configured
+            if let status = bleManager.deviceStatus,
+               status.connectionState != .notConfigured {
+                Section {
+                    CurrentStatusRow(status: status)
+                } header: {
+                    Text("Current Connection")
+                } footer: {
+                    if status.connectionState == .connected {
+                        Text("Select a different network below to change WiFi settings")
+                    } else if status.connectionState == .configuredNotConnected {
+                        Text("Credentials saved but not connected. Select a network to reconfigure.")
+                    }
+                }
+            }
+
             Section {
                 ForEach(sortedNetworks) { network in
                     NetworkRow(network: network)
@@ -151,6 +167,91 @@ public struct WiFiNetworkListView: View {
                     self.isLoading = true
                 }
             }
+        }
+    }
+}
+
+// MARK: - Current Status Row
+
+private struct CurrentStatusRow: View {
+    let status: DeviceStatus
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: statusIcon)
+                    .font(.title2)
+                    .foregroundColor(statusColor)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(status.ssid.isEmpty ? "Unknown Network" : status.ssid)
+                        .font(.headline)
+
+                    Text(statusText)
+                        .font(.subheadline)
+                        .foregroundColor(statusColor)
+                }
+
+                Spacer()
+
+                if status.connectionState == .connected {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(status.ipAddress)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        Text("\(status.rssi) dBm")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var statusIcon: String {
+        switch status.connectionState {
+        case .connected:
+            return "wifi"
+        case .connecting:
+            return "wifi.exclamationmark"
+        case .configuredNotConnected:
+            return "wifi.slash"
+        case .connectionFailed:
+            return "xmark.circle"
+        case .notConfigured:
+            return "questionmark.circle"
+        }
+    }
+
+    private var statusColor: Color {
+        switch status.connectionState {
+        case .connected:
+            return .green
+        case .connecting:
+            return .orange
+        case .configuredNotConnected:
+            return .yellow
+        case .connectionFailed:
+            return .red
+        case .notConfigured:
+            return .secondary
+        }
+    }
+
+    private var statusText: String {
+        switch status.connectionState {
+        case .connected:
+            return "Connected"
+        case .connecting:
+            return "Connecting..."
+        case .configuredNotConnected:
+            return "Not Connected"
+        case .connectionFailed:
+            return "Connection Failed"
+        case .notConfigured:
+            return "Not Configured"
         }
     }
 }
