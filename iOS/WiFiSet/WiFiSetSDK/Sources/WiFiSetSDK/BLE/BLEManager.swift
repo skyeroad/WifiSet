@@ -257,7 +257,10 @@ extension BLEManager: CBPeripheralDelegate {
             return
         }
 
-        guard let data = characteristic.value else { return }
+        guard let data = characteristic.value, data.count >= MessageHeader.size else {
+            // Skip empty or too-short data (characteristic not yet initialized)
+            return
+        }
 
         do {
             let message = try decoder.decode(data)

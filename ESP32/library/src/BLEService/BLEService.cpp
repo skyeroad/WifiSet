@@ -161,7 +161,7 @@ void WiFiSetBLEService::sendNotification(BLECharacteristic* characteristic, cons
 }
 
 void WiFiSetBLEService::sendWiFiNetworkList(const std::vector<WiFiNetworkInfo>& networks) {
-    if (!clientConnected) {
+    if (!clientConnected || !pWiFiListCharacteristic) {
         return;
     }
 
@@ -169,19 +169,28 @@ void WiFiSetBLEService::sendWiFiNetworkList(const std::vector<WiFiNetworkInfo>& 
     std::vector<uint8_t> startMsg = messageBuilder.buildWiFiListStart();
     sendNotification(pWiFiListCharacteristic, startMsg);
 
-    delay(10); // Small delay between messages
+    delay(100); // Longer delay to prevent BLE stack overflow
+    yield();    // Let watchdog timer reset
 
     // Send each network entry
-    for (const auto& network : networks) {
-        std::vector<uint8_t> entryMsg = messageBuilder.buildWiFiNetworkEntry(network);
+    for (size_t i = 0; i < networks.size(); i++) {
+        if (!clientConnected) {
+            return; // Client disconnected during transmission
+        }
+
+        std::vector<uint8_t> entryMsg = messageBuilder.buildWiFiNetworkEntry(networks[i]);
         sendNotification(pWiFiListCharacteristic, entryMsg);
-        delay(10); // Small delay between notifications
+        delay(100); // Longer delay between notifications
+        yield();    // Let watchdog timer reset
     }
 
     // Send List End
     uint8_t networkCount = networks.size() > 255 ? 255 : static_cast<uint8_t>(networks.size());
     std::vector<uint8_t> endMsg = messageBuilder.buildWiFiListEnd(networkCount);
     sendNotification(pWiFiListCharacteristic, endMsg);
+
+    delay(100); // Final delay after list end
+    yield();
 }
 
 void WiFiSetBLEService::sendCredentialAck(uint8_t statusCode) {

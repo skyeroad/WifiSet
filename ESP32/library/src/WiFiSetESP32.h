@@ -213,6 +213,10 @@ private:
     WiFiSet::ConnectionState lastConnectionState;
     unsigned long lastStatusUpdate;
 
+    // Deferred action flags (work done in loop, not callbacks)
+    volatile bool pendingClientConnect;
+    volatile bool pendingClientDisconnect;
+
     // User callbacks
     std::function<void(const String&, const String&)> credentialsReceivedCallback;
     std::function<void(WiFiSet::WiFiSetConnectionStatus)> connectionStatusCallback;

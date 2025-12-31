@@ -5,7 +5,9 @@ using namespace WiFiSet;
 WiFiSetESP32::WiFiSetESP32(const char* deviceName)
     : deviceName(deviceName),
       lastConnectionState(ConnectionState::NOT_CONFIGURED),
-      lastStatusUpdate(0) {}
+      lastStatusUpdate(0),
+      pendingClientConnect(false),
+      pendingClientDisconnect(false) {}
 
 WiFiSetESP32::~WiFiSetESP32() {}
 
@@ -49,6 +51,36 @@ void WiFiSetESP32::begin() {
 
 void WiFiSetESP32::loop() {
     bleService.loop();
+
+    // Handle deferred BLE client connect (do heavy work outside callback)
+    if (pendingClientConnect) {
+        pendingClientConnect = false;
+
+        // Notify user callback (now safe - we're in main loop)
+        if (bleClientConnectedCallback) {
+            bleClientConnectedCallback();
+        }
+
+        // Small delay to let serial output complete
+        delay(100);
+
+        // Perform WiFi scan and send results
+        performWiFiScanAndSend();
+
+        // Send current status
+        delay(100);
+        sendCurrentStatus();
+    }
+
+    // Handle deferred BLE client disconnect
+    if (pendingClientDisconnect) {
+        pendingClientDisconnect = false;
+
+        if (bleClientDisconnectedCallback) {
+            bleClientDisconnectedCallback();
+        }
+    }
+
     monitorConnection();
 }
 
@@ -108,21 +140,21 @@ void WiFiSetESP32::sendCurrentStatus() {
 }
 
 void WiFiSetESP32::performWiFiScanAndSend() {
-    // Give some time for BLE connection to stabilize
-    delay(500);
+    // Give time for BLE connection to stabilize
+    delay(1000);
+    yield();
 
-    // Perform WiFi scan
-    Serial.println("[SCAN] Starting WiFi scan...");
+    // Perform WiFi scan (minimal debug output)
     std::vector<WiFiNetworkInfo> networks = wifiManager.scanNetworks();
-    Serial.printf("[SCAN] Found %d networks\n", networks.size());
+
+    delay(100);
+    yield();
 
     // Send network list to BLE client
     if (bleService.isClientConnected()) {
-        Serial.println("[SCAN] Sending network list to client...");
         bleService.sendWiFiNetworkList(networks);
-        Serial.println("[SCAN] Network list sent successfully");
-    } else {
-        Serial.println("[SCAN] Client disconnected, not sending");
+        delay(100);
+        Serial.printf("[SCAN] Sent %d networks\n", networks.size());
     }
 }
 
@@ -175,23 +207,13 @@ void WiFiSetESP32::onCredentialsReceived(const String& ssid, const String& passw
 }
 
 void WiFiSetESP32::onClientConnected() {
-    // Notify user callback
-    if (bleClientConnectedCallback) {
-        bleClientConnectedCallback();
-    }
-
-    // Automatically perform WiFi scan and send results
-    performWiFiScanAndSend();
-
-    // Send current status
-    sendCurrentStatus();
+    // Just set flag - heavy work done in loop() to avoid BLE callback issues
+    pendingClientConnect = true;
 }
 
 void WiFiSetESP32::onClientDisconnected() {
-    // Notify user callback
-    if (bleClientDisconnectedCallback) {
-        bleClientDisconnectedCallback();
-    }
+    // Just set flag - callback done in loop() to avoid BLE callback issues
+    pendingClientDisconnect = true;
 }
 
 void WiFiSetESP32::onStatusRequest() {
