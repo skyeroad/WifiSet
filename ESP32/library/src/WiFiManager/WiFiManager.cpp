@@ -10,7 +10,16 @@ void WiFiManager::setError(const String& error) {
 
 void WiFiManager::begin() {
     WiFi.mode(WIFI_STA);
-    WiFi.disconnect();
+    WiFi.disconnect(true);  // true = erase AP config from memory
+    delay(500);  // Give WiFi stack time to fully initialize
+
+    // Wait for WiFi to be ready (status should become IDLE)
+    unsigned long startWait = millis();
+    while (WiFi.status() == WL_DISCONNECTED && millis() - startWait < 2000) {
+        delay(100);
+    }
+    Serial.printf("[WiFi] Initial status: %d\n", WiFi.status());
+
     updateConnectionState();
 }
 
@@ -75,12 +84,16 @@ WiFiConnectResult WiFiManager::connect(const String& ssid, const String& passwor
     Serial.printf("[WiFi] Connecting to: '%s'\n", ssid.c_str());
     Serial.printf("[WiFi] Password length: %d\n", password.length());
 
-    // Disconnect if already connected
-    if (WiFi.status() == WL_CONNECTED) {
-        Serial.println("[WiFi] Disconnecting from current network...");
-        WiFi.disconnect();
-        delay(100);
+    // Ensure WiFi is in clean state
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_STA);
+
+    // Wait for WiFi to be ready (IDLE status = 0)
+    unsigned long startWait = millis();
+    while (WiFi.status() != WL_IDLE_STATUS && millis() - startWait < 2000) {
+        delay(50);
     }
+    Serial.printf("[WiFi] Pre-connect status: %d\n", WiFi.status());
 
     // Update state to connecting
     connectionState = ConnectionState::CONNECTING;
